@@ -3,12 +3,13 @@
 <configuration>
 	<typeAliases>
 		<typeAlias alias="uservo" type="com.bigdata2017.mysite.vo.UserVo"/>
+		<typeAlias alias="guestbookvo" type="com.bigdata2017.mysite.vo.GuestbookVo"/>
     </typeAliases>	
 	
 	<mappers>
 		<mapper resource="mybatis/mappers/user.xml"/>
-		<!--mapper resource="mybatis/mappers/guestbook.xml"/-->
-		<!--mapper resource="mybatis/mappers/board.xml"/-->
+		<mapper resource="mybatis/mappers/guestbook.xml"/>
+		<!--mapper resource="mybatis/mappers/board.xml"/ -->
 	</mappers>
 	
 </configuration>
