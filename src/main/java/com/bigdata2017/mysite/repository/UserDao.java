@@ -1,18 +1,29 @@
 package com.bigdata2017.mysite.repository;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 
+import org.apache.ibatis.session.SqlSession;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import com.bigdata2017.mysite.exception.UserDaoException;
 import com.bigdata2017.mysite.vo.UserVo;
 
+import oracle.jdbc.pool.OracleDataSource;
+
 @Repository
 public class UserDao {
+	
+	@Autowired
+	private OracleDataSource oracleDataSource;
+	
+	@Autowired
+	private SqlSession sqlSession;
 	
 	public int update( UserVo userVo ) {
 		
@@ -21,7 +32,7 @@ public class UserDao {
 		PreparedStatement pstmt = null;
 
 		try {
-			conn = getConnection();
+			conn = oracleDataSource.getConnection();
 			
 			if( "".equals( userVo.getPassword() ) ) {
 				String sql = 
@@ -71,219 +82,24 @@ public class UserDao {
 	}
 	
 	public UserVo get( String email ) {
-		UserVo vo = null;
-		
-		Connection conn = null;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		
-		try {
-			conn = getConnection();
-
-			String sql = 
-				" select no, name" + 
-				"   from member" + 
-				"  where email=?";
-			pstmt = conn.prepareStatement(sql);
-			pstmt.setString( 1, email );
-			
-			rs = pstmt.executeQuery();
-			if( rs.next() ) {
-				Long no = rs.getLong( 1 );
-				String name = rs.getString( 2 );
-				
-				vo = new UserVo();
-				vo.setNo(no);
-				vo.setName(name);
-			}
-
-		} catch (SQLException e) {
-			System.out.println("error :" + e);
-		} finally {
-			// 자원 정리
-			try {
-				if(rs != null) {
-					rs.close();
-				}
-				if (pstmt != null) {
-					pstmt.close();
-				}
-				if (conn != null) {
-					conn.close();
-				}
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
-		}		
-		
-		return vo;
+		return sqlSession.selectOne( "user.getByEmail", email );
 	}
 	
 	public UserVo get( Long userNo ) {
-		UserVo vo = null;
-		
-		Connection conn = null;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		
-		try {
-			conn = getConnection();
-
-			String sql = 
-				" select no, name, email, gender" + 
-				"   from member" + 
-				"  where no=?";
-			pstmt = conn.prepareStatement(sql);
-			pstmt.setLong( 1, userNo );
-			
-			rs = pstmt.executeQuery();
-			if( rs.next() ) {
-				Long no = rs.getLong( 1 );
-				String name = rs.getString( 2 );
-				String email = rs.getString( 3 );
-				String gender = rs.getString( 4 );
-				
-				vo = new UserVo();
-				vo.setNo(no);
-				vo.setName(name);
-				vo.setEmail(email);
-				vo.setGender(gender);
-			}
-
-		} catch (SQLException e) {
-			System.out.println("error :" + e);
-			//1. logging 처리(파일, DB)
-			//2. RuntimeException 전환
-		} finally {
-			// 자원 정리
-			try {
-				if(rs != null) {
-					rs.close();
-				}
-				if (pstmt != null) {
-					pstmt.close();
-				}
-				if (conn != null) {
-					conn.close();
-				}
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
-		}		
-		
-		return vo;
+		return sqlSession.selectOne( "user.getByNo", userNo );
 	}
 	
 	public UserVo get( String email, String password ) throws UserDaoException {
-		UserVo vo = null;
-		
-		Connection conn = null;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		
-		try {
-			conn = getConnection();
-
-			String sql = 
-				" select no, name" + 
-				"   from member" + 
-				"  where email=?" + 
-				"    and password=?";
-			pstmt = conn.prepareStatement(sql);
-
-			pstmt.setString(1, email );
-			pstmt.setString(2, password );
-
-			rs = pstmt.executeQuery();
-			if( rs.next() ) {
-				Long no = rs.getLong( 1 );
-				String name = rs.getString( 2 );
-				
-				vo = new UserVo();
-				vo.setNo(no);
-				vo.setName(name);
-			}
-
-		} catch (SQLException e) {
-			//System.out.println("error :" + e);
-			throw new UserDaoException( e.getMessage() );
-		} finally {
-			// 자원 정리
-			try {
-				if(rs != null) {
-					rs.close();
-				}
-				if (pstmt != null) {
-					pstmt.close();
-				}
-				if (conn != null) {
-					conn.close();
-				}
-			} catch (SQLException e) {
-				throw new UserDaoException( e.getMessage() );
-			}
-		}
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put("email", email);
+		map.put("password", password);
+		UserVo vo = sqlSession.selectOne("user.getByEmailAndPassword", map);
 		
 		return vo;
 	}
 	
 	public int insert( UserVo vo ) {
-		int count = 0;
-		Connection conn = null;
-		PreparedStatement pstmt = null;
-
-		try {
-			conn = getConnection();
-
-			String sql = 
-				" insert" + 
-				"   into member" + 
-				" values ( seq_member.nextval, ?, ?, ?, ?, sysdate)";
-			pstmt = conn.prepareStatement(sql);
-
-			pstmt.setString(1, vo.getName() );
-			pstmt.setString(2, vo.getPassword());
-			pstmt.setString(3, vo.getEmail());
-			pstmt.setString(4, vo.getGender());
-
-			count = pstmt.executeUpdate();
-
-		} catch (SQLException e) {
-			System.out.println("error :" + e);
-		} finally {
-			// 자원 정리
-			try {
-				if (pstmt != null) {
-					pstmt.close();
-				}
-				if (conn != null) {
-					conn.close();
-				}
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
-		}
-
+		int count = sqlSession.insert("user.insert", vo);
 		return count;
 	}	
-	
-	
-	private Connection getConnection() throws SQLException {
-
-		Connection conn = null;
-
-		try {
-			// JDBC 드라이버 로딩(JDBC 클래스 로딩)
-			Class.forName("oracle.jdbc.driver.OracleDriver");
-
-			// Connection 가져오기
-			String url = "jdbc:oracle:thin:@localhost:1521:xe";
-			conn = DriverManager.getConnection(url, "webdb", "webdb");
-
-		} catch (ClassNotFoundException e) {
-			System.out.println("드라이버 로딩 실패:" + e);
-		}
-
-		return conn;
-	}		
 }
